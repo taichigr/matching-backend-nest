@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthDto } from './dto/auth.dto';
+import { AuthDto, AuthHostDto } from './dto/auth.dto';
 import { Msg, Jwt } from './interfaces/auth.interface';
 
 @Injectable()
@@ -20,6 +20,7 @@ export class AuthService {
     try {
       await this.prisma.user.create({
         data: {
+          username: dto.username,
           email: dto.email,
           hashedPassword: hashed,
         },
@@ -62,5 +63,40 @@ export class AuthService {
     return {
       accessToken: token,
     };
+  }
+
+  async signUpHost(dto: AuthHostDto): Promise<Msg> {
+    const hashed = await bcrypt.hash(dto.password, 12);
+    try {
+      await this.prisma.host.create({
+        data: {
+          username: dto.username,
+          email: dto.email,
+          hashedPassword: hashed,
+        },
+      });
+      return {
+        message: 'ok',
+      };
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ForbiddenException('This email is already taken');
+        }
+      }
+      throw error;
+    }
+  }
+
+  async loginHost(dto: AuthHostDto): Promise<Jwt> {
+    const host = await this.prisma.host.findUnique({
+      where: {
+        email: dto.email,
+      },
+    });
+    if (!host) throw new ForbiddenException('Email or password incorrect');
+    const isValid = await bcrypt.compare(dto.password, host.hashedPassword);
+    if (!isValid) throw new ForbiddenException('Email or password incorrect');
+    return this.generateJwt(host.id, host.email);
   }
 }

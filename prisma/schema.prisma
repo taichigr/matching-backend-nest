@@ -10,15 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id             Int      @id @default(autoincrement())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  email          String   @unique
-  hashedPassword String
-  nickName       String?
-}
-
 model Admin {
   id             Int      @id @default(autoincrement())
   createdAt      DateTime @default(now())
@@ -28,11 +19,95 @@ model Admin {
   nickName       String?
 }
 
-model Chat {
+model User {
+  id             Int           @id @default(autoincrement())
+  username       String        @unique
+  hashedPassword String
+  email          String        @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime?     @updatedAt
+  profile        Profile?
+  referrals      Referral[]
+  likedUsers     Reaction[]    @relation("ReactionFromUser")
+  likedBy        Reaction[]    @relation("ReactionToUser")
+  roomUsers      RoomUser[]
+  messages       RoomMessage[]
+}
+
+model Profile {
+  userId    Int       @id
+  user      User      @relation(fields: [userId], references: [id])
+  firstName String
+  lastName  String
+  bio       String
+  birthDate DateTime
+  gender    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model Host {
+  id             Int          @id @default(autoincrement())
+  username       String       @unique
+  email          String       @unique
+  hashedPassword String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime?    @updatedAt
+  invitations    Invitation[]
+  referrals      Referral[]
+}
+
+model Invitation {
+  id        Int       @id @default(autoincrement())
+  hostId    Int
+  host      Host      @relation(fields: [hostId], references: [id])
+  inviteUrl String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model Referral {
+  id        Int       @id @default(autoincrement())
+  hostId    Int
+  host      Host      @relation(fields: [hostId], references: [id])
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+}
+
+model Reaction {
   id         Int      @id @default(autoincrement())
+  fromUserId Int
+  fromUser   User     @relation("ReactionFromUser", fields: [fromUserId], references: [id])
+  toUserId   Int
+  toUser     User     @relation("ReactionToUser", fields: [toUserId], references: [id])
+  type       String
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  senderId   Int
-  receiverId Int
-  message    String
+}
+
+model Room {
+  id        Int           @id @default(autoincrement())
+  createdAt DateTime      @default(now())
+  roomUsers RoomUser[]
+  messages  RoomMessage[]
+}
+
+model RoomUser {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  room      Room     @relation(fields: [roomId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model RoomMessage {
+  id          Int      @id @default(autoincrement())
+  roomId      Int
+  room        Room     @relation(fields: [roomId], references: [id])
+  senderId    Int
+  sender      User     @relation(fields: [senderId], references: [id])
+  messageText String
+  createdAt   DateTime @default(now())
 }

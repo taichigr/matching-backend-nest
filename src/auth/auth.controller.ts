@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { AuthDto } from './dto/auth.dto';
+import { AuthDto, AuthHostDto } from './dto/auth.dto';
 import { Csrf, Msg } from './interfaces/auth.interface';
 @Controller('auth')
 export class AuthController {
@@ -48,6 +48,46 @@ export class AuthController {
   @Post('/logout')
   logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Msg {
     res.cookie('access_token', '', {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'none',
+      path: '/',
+    });
+    return {
+      message: 'ok',
+    };
+  }
+
+  @Post('host/signup')
+  signUpHost(@Body() dto: AuthHostDto): Promise<Msg> {
+    return this.authService.signUpHost(dto);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('host/login')
+  async loginHost(
+    @Body() dto: AuthHostDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<Msg> {
+    const jwt = await this.authService.loginHost(dto);
+    res.cookie('access_token_host', jwt.accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'none',
+      path: '/',
+    });
+    return {
+      message: 'ok',
+    };
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('host/logout')
+  logoutHost(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Msg {
+    res.cookie('access_token_host', '', {
       httpOnly: true,
       secure: false,
       sameSite: 'none',
